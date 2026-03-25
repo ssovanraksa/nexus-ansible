@@ -1,0 +1,22 @@
+---
+- name: Check if running on Debian/Ubuntu
+  tags: ['check-compatibility']
+  assert:
+    that:
+      - ansible_distribution | lower in ['ubuntu', 'debian']
+    fail_msg: "This role only supports Ubuntu and Debian distributions."
+
+- name: Show all variables
+  tags: ['debug']
+  debug:
+    var: vars
+
+- name: Install Nexus
+  tags: ['install']
+  import_tasks: install.yml
+  when: nexus_state == "present"
+
+- name: Include uninstall tasks
+  tags: ['uninstall']
+  import_tasks: uninstall.yml
+  when: nexus_state == "absent"

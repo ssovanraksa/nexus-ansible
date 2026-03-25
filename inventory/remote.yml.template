@@ -1,0 +1,30 @@
+all:
+  children:
+    remote:
+      hosts:
+        active-host:
+          ansible_host: YOUR_HOST_IP
+          ansible_user: YOUR_USER
+          ansible_python_interpreter: "/usr/bin/python3"
+          ansible_ssh_private_key_file: ./inventory/id_rsa_remote
+
+          nexus_db_user: YOUR_DB_USER
+          nexus_db_password: YOUR_DB_PASSWORD
+          nexus_db_database: YOUR_DB_DATABASE
+          nexus_db_schema: YOUR_DB_DATABASE_SCHEMA
+          
+        standy-host:
+          ansible_host: YOUR_HOST_IP
+          ansible_user: YOUR_USER
+          ansible_python_interpreter: "/usr/bin/python3"
+          ansible_ssh_private_key_file: ./inventory/id_rsa_remote
+          
+          nexus_db_user: YOUR_DB_USER
+          nexus_db_password: YOUR_DB_PASSWORD
+          nexus_db_database: YOUR_DB_DATABASE
+          nexus_db_schema: YOUR_DB_DATABASE_SCHEMA
+          
+      vars:
+        nexus_db_host: IP_EXTERNAL_DB
+        nexus_db_port: 5432
+      

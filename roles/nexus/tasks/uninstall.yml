@@ -1,0 +1,71 @@
+---
+- name: Check if Nexus service exists
+  ansible.builtin.stat:
+    path: /etc/systemd/system/nexus.service
+  register: nexus_service_file
+
+- name: Stop Nexus service if it exists
+  ansible.builtin.systemd:
+    name: nexus
+    state: stopped
+  when: nexus_service_file.stat.exists
+
+- name: Disable Nexus service if it exists
+  ansible.builtin.systemd:
+    name: nexus
+    enabled: false
+  when: nexus_service_file.stat.exists
+
+- name: Remove systemd service file
+  ansible.builtin.file:
+    path: "/etc/systemd/system/nexus.service"
+    state: absent
+
+- name: Reload systemd daemon
+  ansible.builtin.command: systemctl daemon-reexec
+
+# Remove Nexus user and group, and clean up files
+
+- name: Remove Nexus extracted versions
+  ansible.builtin.file:
+    path: "{{ nexus_install_dir }}/sonatype"
+    state: absent
+
+- name: Remove Nexus extracted versions
+  ansible.builtin.file:
+    path: "{{ nexus_install_dir }}/nexus-{{ nexus_version }}"
+    state: absent
+
+- name: Remove Nexus data directory
+  ansible.builtin.file:
+    path: "{{ nexus_install_dir }}/sonatype-work"
+    state: absent
+
+- name: Remove Nexus user
+  ansible.builtin.user:
+    name: "nexus"
+    state: absent
+    remove: yes
+  ignore_errors: true
+
+- name: Remove Nexus group
+  ansible.builtin.group:
+    name: nexus
+    state: absent
+
+- name: Remove leftover PID files
+  ansible.builtin.file:
+    path: "/tmp"
+    state: directory
+    
+- name: Find Nexus temp files
+  ansible.builtin.find:
+    paths: /tmp
+    patterns: "i4jdaemon_*"
+  register: nexus_tmp_files
+
+- name: Remove Nexus temp files
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ nexus_tmp_files.files }}"

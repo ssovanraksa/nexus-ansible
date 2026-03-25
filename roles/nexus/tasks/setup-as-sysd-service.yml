@@ -1,0 +1,87 @@
+# https://help.sonatype.com/en/run-as-a-service.html
+# 
+# Setup as systemd service
+# 
+# By default, managing nexus isn't managed via systemctl. So, on server restarts, nexus won't start automatically.
+#
+# The following tasks will setup nexus as a systemd service, so that you can manage it with systemctl command.
+---
+- name: Ensure to-be-symlinked sonatype/ directory exists
+  ansible.builtin.file:
+    path: /opt/sonatype
+    state: directory
+    owner: nexus
+    group: nexus
+    recurse: yes
+    mode: '0755'
+
+- name: Ensure sonatype-work/ directory exists
+  ansible.builtin.file:
+    path: /opt/sonatype-work
+    state: directory
+    owner: nexus
+    group: nexus
+    recurse: yes
+    mode: '0755'
+
+- name: Create nexus.rc file (for Nexus >= 3.80)
+  ansible.builtin.copy:
+    dest: /opt/nexus-{{ nexus_version }}/bin/nexus.rc
+    content: |-
+      run_as_user="nexus"
+    owner: nexus
+    group: nexus
+    mode: '0644'
+
+- name: Ensure correct ownership of Nexus install directory
+  ansible.builtin.file:
+    path: /opt/nexus-{{ nexus_version }}
+    state: directory
+    recurse: yes
+    owner: nexus
+    group: nexus
+
+- name: Create symlink /opt/sonatype/nexus -> versioned directory
+  ansible.builtin.file:
+    dest: /opt/sonatype/nexus
+    src: /opt/nexus-{{ nexus_version }}
+    state: link
+    force: yes
+
+- name: Create nexus systemd service file
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/nexus.service
+    mode: '0644'
+    content: |
+      [Unit]
+      Description=nexus service
+      After=network.target
+
+      [Service]
+      Environment="NEXUS_DATASTORE_NEXUS_JDBCURL=jdbc:postgresql://{{ nexus_db_host }}:{{ nexus_db_port }}/{{ nexus_db_database }}?currentSchema={{ nexus_db_schema }}"
+      Environment="NEXUS_DATASTORE_NEXUS_USERNAME={{  nexus_db_user }}"
+      Environment="NEXUS_DATASTORE_NEXUS_PASSWORD={{ nexus_db_password }}"
+      Type=forking
+      LimitNOFILE=65536
+      ExecStart=/opt/sonatype/nexus/bin/nexus start
+      ExecStop=/opt/sonatype/nexus/bin/nexus stop
+      User=nexus
+      Restart=on-abort
+      TimeoutSec=600
+
+      [Install]
+      WantedBy=multi-user.target
+
+- name: Reload systemd daemon
+  ansible.builtin.systemd:
+    daemon_reload: yes
+
+- name: Enable nexus service
+  ansible.builtin.systemd:
+    name: nexus
+    enabled: yes
+
+- name: Start nexus service
+  ansible.builtin.systemd:
+    name: nexus
+    state: started

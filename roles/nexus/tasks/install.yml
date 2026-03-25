@@ -1,0 +1,54 @@
+---
+- name: Update apt cache
+  apt:
+    update_cache: yes
+  tags: ['packages']
+
+- name: Ensure required packages are installed
+  ansible.builtin.package:
+    name:
+      - tar
+    state: present
+
+- name: Download Nexus archive
+  ansible.builtin.get_url:
+    url: "{{ nexus_url }}"
+    dest: "{{ nexus_archive }}"
+    mode: '0644'
+    force: no
+
+- name: Create /opt directory if it does not exist
+  ansible.builtin.file:
+    path: "{{ nexus_install_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: Extract Nexus archive into /opt
+  ansible.builtin.command:
+    # For reference: https://help.sonatype.com/en/install-nexus-repository.html
+    cmd: >
+      tar xvz --keep-directory-symlink -f {{ nexus_archive }} -C {{ nexus_install_dir }}
+    creates: "{{ nexus_install_dir }}/nexus-{{ nexus_version }}"
+
+- name: Ensure nexus group exists
+  ansible.builtin.group:
+    name: nexus
+    state: present
+
+- name: Ensure nexus user exists
+  ansible.builtin.user:
+    name: nexus
+    group: nexus
+    shell: /bin/bash
+    create_home: no
+    system: yes
+  
+- name: Ensure installation directory permissions
+  ansible.builtin.file:
+    path: "{{ nexus_install_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: Setup as systemd service
+  tags: ['setup-sysd-service']
+  import_tasks: setup-as-sysd-service.yml

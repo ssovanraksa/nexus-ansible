@@ -1,0 +1,16 @@
+---
+- name: Ping
+  hosts: servers
+  gather_facts: false
+  tags: ping
+  become: false
+  tasks:
+    - name: Ping the Nexus server
+      ansible.builtin.ping:
+      
+- name: Install Nexus
+  hosts: servers
+  gather_facts: true
+  tags: install
+  roles:
+    - nexus
